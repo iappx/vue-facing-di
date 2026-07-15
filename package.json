@@ -1,6 +1,6 @@
 {
   "name": "@iappx/vue-facing-di",
-  "version": "3.0.6",
+  "version": "3.0.7",
   "description": "Dependency injection for Vue class components — a tsyringe-powered wrapper around vue-facing-decorator.",
   "keywords": [
     "vue",
