@@ -1,0 +1,62 @@
+{
+  "name": "@iappx/vue-facing-di",
+  "version": "3.0.6",
+  "description": "Dependency injection for Vue class components — a tsyringe-powered wrapper around vue-facing-decorator.",
+  "keywords": [
+    "vue",
+    "vue3",
+    "dependency-injection",
+    "di",
+    "ioc",
+    "tsyringe",
+    "decorator",
+    "vue-facing-decorator",
+    "class-component",
+    "typescript"
+  ],
+  "author": "iappx",
+  "license": "MIT",
+  "homepage": "https://github.com/iappx/vue-facing-di#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iappx/vue-facing-di.git"
+  },
+  "bugs": {
+    "url": "https://github.com/iappx/vue-facing-di/issues"
+  },
+  "main": "./lib/index.js",
+  "typings": "./lib/index.d.ts",
+  "files": [
+    "lib"
+  ],
+  "scripts": {
+    "build": "rimraf ./lib && tsc --build tsconfig.json",
+    "prepublishOnly": "npm run build",
+    "dev": "ts-node ./dev/main.ts",
+    "test": "jest --config ./test/jest.json"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "peerDependencies": {
+    "reflect-metadata": "^0.1.13 || ^0.2.0",
+    "tsyringe": "^4.8.0",
+    "vue": "^3.0.0"
+  },
+  "dependencies": {
+    "vue-facing-decorator": "3.0.4"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.3",
+    "@types/superagent": "^4.1.15",
+    "eslint": "^8.6.0",
+    "jest": "^29.2.1",
+    "reflect-metadata": "^0.2.2",
+    "rimraf": "^3.0.2",
+    "superagent": "^8.0.2",
+    "ts-jest": "^29.0.3",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.1.6"
+  }
+}
