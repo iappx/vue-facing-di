@@ -129,7 +129,7 @@ describe('component', () => {
 
         @Component({
             name: 'Custom',
-            components: { Child },
+            components: { Child, Opaque: Child as unknown },
             template: '<child />',
             inheritAttrs: false,
             emits: ['done'],

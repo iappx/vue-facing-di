@@ -1,4 +1,4 @@
-import type { Component, ComponentCustomOptions, ComponentPublicInstance, Directive } from 'vue'
+import type { ComponentCustomOptions, ComponentPublicInstance } from 'vue'
 import type { TRawComponentOptions } from './TRawComponentOptions'
 import type { TSetupFunction } from './TSetupFunction'
 import type { TSetupState } from './TSetupState'
@@ -7,8 +7,8 @@ export type TComponentOption = {
     name?: string
     emits?: string[]
     provide?: Record<PropertyKey, unknown> | ((this: ComponentPublicInstance) => Record<PropertyKey, unknown>)
-    components?: Record<string, Component>
-    directives?: Record<string, Directive>
+    components?: Record<string, unknown>
+    directives?: Record<string, unknown>
     inheritAttrs?: boolean
     expose?: string[]
     render?: (...args: any[]) => unknown
