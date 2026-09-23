@@ -1,18 +1,12 @@
 {
-  "moduleFileExtensions": ["js", "json", "ts", "node"],
-  "rootDir": ".",
-  "useStderr": true,
-  "testEnvironment": "node",
-  "testRegex": ".*/*.spec.ts$",
-  "moduleDirectories": [
-    "node_modules",
-    "src"
-  ],
+  "rootDir": "..",
+  "testEnvironment": "jsdom",
+  "testEnvironmentOptions": {
+    "customExportConditions": ["node", "node-addons"]
+  },
+  "testMatch": ["<rootDir>/test/**/*.spec.ts"],
+  "setupFiles": ["reflect-metadata"],
   "transform": {
-    "^.+\\.(t|j)s$": "ts-jest"
-  },
-  "moduleNameMapper": {
-    "^@/(.*)$": "<rootDir>/../src/$1"
-  },
-  "testTimeout": 60000
+    "^.+\\.ts$": ["ts-jest", { "tsconfig": "<rootDir>/test/tsconfig.json" }]
+  }
 }

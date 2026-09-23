@@ -3,26 +3,44 @@
 [![npm version](https://img.shields.io/npm/v/@iappx/vue-facing-di.svg)](https://www.npmjs.com/package/@iappx/vue-facing-di)
 [![license](https://img.shields.io/npm/l/@iappx/vue-facing-di.svg)](./LICENSE)
 
-A thin wrapper around [vue-facing-decorator](https://github.com/facing-dev/vue-facing-decorator)
-that brings **dependency injection** into Vue class components, powered by
+Class-based Vue 3 components with **constructor dependency injection** powered by
 [tsyringe](https://github.com/microsoft/tsyringe).
 
-Write your Vue components as classes exactly like you do with `vue-facing-decorator`, but
-declare constructor dependencies and let the tsyringe container resolve them for you.
+Write a component as a class, declare its services as constructor parameters, and the
+tsyringe container builds it. No other runtime dependency: the class-to-options compiler is
+part of this package.
 
-## How it works
+```vue
+<template>
+  <button @click="refresh">{{ user?.name ?? '…' }}</button>
+</template>
 
-`vue-facing-decorator` turns a decorated class into a Vue component by reading its
-properties, methods, computeds, watchers, props, etc. and assembling a Vue options object.
+<script lang="ts">
+import { Component, Prop, VueBase } from '@iappx/vue-facing-di'
+import { inject } from 'tsyringe'
+import { UserService, type User } from './UserService'
 
-This library extends that pipeline: instead of instantiating the component class with `new`,
-it resolves the instance **through the tsyringe container** (`container.resolve(cons)`).
-Every class decorated with `@Component` is automatically registered as `@injectable()`, so
-its constructor dependencies are injected before the component's reactive `data` is derived
-from the instance.
+@Component({})
+export default class UserCard extends VueBase {
+  @Prop({ required: true })
+  public readonly userId: number
 
-The only thing you change in your components is the base class: use `VueBase` instead of the
-original `Vue`.
+  public user: User | null = null
+
+  constructor(@inject(UserService) private readonly users: UserService) {
+    super()
+  }
+
+  public async mounted(): Promise<void> {
+    await this.refresh()
+  }
+
+  public async refresh(): Promise<void> {
+    this.user = await this.users.load(this.userId)
+  }
+}
+</script>
+```
 
 ## Installation
 
@@ -30,8 +48,8 @@ original `Vue`.
 npm install @iappx/vue-facing-di tsyringe reflect-metadata
 ```
 
-`vue`, `tsyringe` and `reflect-metadata` are peer requirements. tsyringe relies on decorator
-metadata, so make sure `reflect-metadata` is imported once at your application entry point:
+`vue` (3.3+), `tsyringe` and `reflect-metadata` are peer dependencies. Import the polyfill once,
+before anything that touches tsyringe:
 
 ```ts
 import 'reflect-metadata'
@@ -39,116 +57,119 @@ import 'reflect-metadata'
 
 ### TypeScript configuration
 
-Decorator metadata must be enabled in your `tsconfig.json`:
-
 ```json
 {
   "compilerOptions": {
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "useDefineForClassFields": false
   }
 }
 ```
 
-## Usage
+- `experimentalDecorators` — the package implements the legacy (TypeScript) decorator protocol,
+  which is also the one tsyringe uses.
+- `useDefineForClassFields: false` — with the standard define semantics a decorated field such as
+  `@Prop() title: string` is re-defined as `undefined` on the instance after `super()` returns, so
+  field initializers can no longer read props.
+- `emitDecoratorMetadata` is optional. esbuild (and therefore Vite) does not emit it, so annotate
+  every constructor parameter with `@inject(Token)`; that works with or without metadata.
 
-Usage is identical to `vue-facing-decorator`, except the base class is `VueBase` instead of
-the original `Vue`.
+## How it works
 
-### Basic component
+`@Component` compiles the class into a Vue options object and marks it `@injectable()`. When Vue
+creates the component, its `data()` resolves the class **through the tsyringe container**:
 
-```vue
-<template>
-  <div>{{ greeting }}</div>
-</template>
+- enumerable fields become reactive `data`;
+- props and methods are already on the instance while the constructor runs, so field initializers
+  can use them (`doubled = this.count * 2`);
+- dependencies the container passed to the constructor are attached to the component as plain,
+  **non-reactive** properties. `this.service` is the very instance the container holds, not a
+  reactive proxy of it, so a `Ref` inside a service stays a `Ref`;
+- the constructor runs once per component instance, also for a component that extends another one.
 
-<script lang="ts">
-import { Component, VueBase } from '@iappx/vue-facing-di'
+## Decorators
 
-@Component({})
-export default class MyComponent extends VueBase {
-  greeting = 'Hello world'
-}
-</script>
-```
+| Decorator | Purpose |
+| --- | --- |
+| `@Component(options?)` | Compiles the class into a component and registers it as injectable. Also usable bare: `@Component`. |
+| `@Prop(options?)` | Declares a prop. `{ type, required, default, validator }`. |
+| `@VModel(options?)` / `@Model` | A settable computed backed by the `modelValue` prop (or `{ name }`); assigning emits `update:<name>`. The member must be named differently from the model. |
+| `@Watch(source, options?)` | Watches `source` with the decorated method. `{ deep, immediate, flush }`. Can be stacked. |
+| `@Emit(event?)` | Emits the method's return value (awaited for promises) and still returns it. |
+| `@Ref(key?)` | A getter for `this.$refs[key ?? member]`. |
+| `@Provide(key?)` | Provides the member's value to descendants. |
+| `@Inject(options?)` | Vue `inject` (not DI): `{ from, default }`. Distinct from tsyringe's `inject`. |
+| `@Setup(fn)` | Stores the result of a composition-API `setup` function in the member. |
+| `@Hook` | Treats a method as a lifecycle hook (standard hook names are detected automatically). |
+| `@Vanilla` | Keeps an accessor as a plain property instead of a cached computed. |
 
-### Injecting a dependency
+Getters and setters become computed properties; the other methods become methods.
 
-Declare a service, register it in the container, and request it in the component
-constructor. Every constructor parameter **must** be annotated with tsyringe's
-`@inject(...)` decorator so the container knows what to resolve.
+### Boolean props
+
+A prop declared with `type: Boolean` accepts the attribute shorthand (`<ui-input disabled />`)
+and defaults to `false`. Declare the type explicitly:
 
 ```ts
-import { singleton } from 'tsyringe'
-
-@singleton()
-export class UserService {
-  getName() {
-    return 'Ada Lovelace'
-  }
-}
+@Prop({ type: Boolean })
+public readonly disabled: boolean
 ```
 
-```vue
-<template>
-  <div>{{ userName }}</div>
-</template>
-
-<script lang="ts">
-import { Component, VueBase } from '@iappx/vue-facing-di'
-import { inject } from 'tsyringe'
-import { UserService } from './UserService'
-
-@Component({})
-export default class UserCard extends VueBase {
-  userName = ''
-
-  constructor(@inject(UserService) private readonly userService: UserService) {
-    super()
-  }
-
-  mounted() {
-    this.userName = this.userService.getName()
-  }
-}
-</script>
-```
-
-> **Note:** always mark constructor parameters with `@inject(Token)`. `@Component` applies
-> tsyringe's `@injectable()`, so the class and all of its explicitly injected dependencies
-> participate in the container's resolution graph. Import `inject` from `tsyringe` — it is
-> distinct from the `Inject` decorator (Vue `provide`/`inject`) re-exported by this package.
+When the build emits decorator metadata (tsc, swc), a prop whose TypeScript type is `boolean`
+gets `type: Boolean` automatically.
 
 ## API
 
-The library re-exports the full decorator surface of `vue-facing-decorator`, so you can import
-everything from a single package:
-
-```ts
-import {
-  Component,        // class decorator — builds the Vue component and registers it as injectable
-  VueBase,          // base class to extend instead of `Vue`
-  Setup, Ref, Watch, Prop, Provide, Inject, Emit, VModel, Model,
-  Vanilla, Hook, BaseTypeIdentify, toNative,
-} from '@iappx/vue-facing-di'
-```
-
 | Export | Description |
 | --- | --- |
-| `Component` | Class decorator that assembles the Vue component and marks the class `@injectable()`. |
-| `VueBase` | Base class that wires the component instance into the DI-aware build pipeline. Extend it instead of `Vue`. |
-| `DiComponentBase` | The underlying decorator factory behind `Component` (exported for advanced use). |
-| Re-exported decorators | `Setup`, `Ref`, `Watch`, `Prop`, `Provide`, `Inject`, `Emit`, `VModel`, `Model`, `Vanilla`, `Hook`, `BaseTypeIdentify`, `toNative` — behave exactly as in `vue-facing-decorator`. |
+| `VueBase` | The base class every component extends. |
+| `ClassComponent.toNative(Cls)` | The Vue options object compiled from a component class. |
+| `ClassComponent.mixins(A, B, …)` | A base class that mixes several components in: `class C extends ClassComponent.mixins(A, B) {}`. |
+| `CustomDecorator.create(creator, { preserve? })` | Builds a member decorator whose `creator(options, key)` edits the compiled options. |
+| `DiPlugin` | A Vue plugin choosing the container components are resolved from. |
+| `VueFacingDiError` | Thrown on invalid declarations. |
 
-For the semantics of the individual decorators, refer to the
-[vue-facing-decorator documentation](https://github.com/facing-dev/vue-facing-decorator).
+### Choosing the container
+
+Components are resolved from tsyringe's global `container` by default. To use another one for the
+whole app:
+
+```ts
+app.use(new DiPlugin(container.createChildContainer()))
+```
+
+A subtree can switch containers by providing `DiPlugin.containerKey`, and `DiPlugin.current()`
+returns the container of the current component (useful inside `@Setup`).
+
+## Migrating from 3.x
+
+- `vue-facing-decorator` is no longer a dependency. Import everything from `@iappx/vue-facing-di`.
+- `toNative(X)` → `ClassComponent.toNative(X)`; `mixins(A, B)` → `ClassComponent.mixins(A, B)`;
+  `createDecorator(fn)` → `CustomDecorator.create(fn)`.
+- `DiComponentBase`, `BaseTypeIdentify` and the `Cons` / `OptionSetupFunction` /
+  `ComponentSetupFunction` types are removed; use `Component`, `TVueConstructor` and
+  `TSetupFunction`.
+- Injected dependencies are no longer part of `$data` and are no longer reactive proxies. Code that
+  wrapped services in `markRaw` to avoid `Ref` unwrapping keeps working and can drop the workaround.
+  The flip side: a template that renders a **plain field of a non-reactive service**
+  (`{{ service.items }}`) used to update because the component reached the service through a
+  reactive proxy; it no longer does. Keep such state reactive in the service itself (`ref`,
+  `reactive`, a store) or copy it into a component field.
+- `@Emit` methods return the method's result instead of `Promise<void>`.
+- `@Watch` resolves its handler by name, so a subclass that overrides the method is the one called.
+- `@VModel` on a member named like its model prop now throws instead of recursing at runtime.
+- `@Provide` reads the value from the live component instead of constructing the class a second
+  time without its dependencies.
+- Stage 3 (TC39) decorators are not supported; tsyringe requires legacy decorators anyway.
 
 ## Development
 
 ```bash
-npm install       # install dependencies
-npm run build     # compile TypeScript to ./lib
-npm test          # run the Jest test suite
+npm install
+npm run typecheck
+npm run lint
+npm test
+npm run build      # tsup → lib/ (ESM + CJS + d.ts)
 ```
 
 ## License

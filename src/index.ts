@@ -1,18 +1,33 @@
-export {
-    Setup,
-    Ref,
-    Watch,
-    Prop,
-    Provide,
-    Inject,
-    Emit,
-    VModel,
-    Model,
-    Vanilla,
-    Hook,
-    BaseTypeIdentify,
-    toNative,
-} from 'vue-facing-decorator/src'
-
-export * from './component'
-export * from './VueBase'
+export { VueBase } from './VueBase'
+export { VueFacingDiError } from './VueFacingDiError'
+export { ClassComponent } from './component/ClassComponent'
+export { DiPlugin } from './di/DiPlugin'
+export { CustomDecorator } from './decorators/CustomDecorator'
+export { Component } from './decorators/Component'
+export { Prop } from './decorators/Prop'
+export { VModel, Model } from './decorators/VModel'
+export { Emit } from './decorators/Emit'
+export { Watch } from './decorators/Watch'
+export { Ref } from './decorators/Ref'
+export { Provide } from './decorators/Provide'
+export { Inject } from './decorators/Inject'
+export { Setup } from './decorators/Setup'
+export { Hook } from './decorators/Hook'
+export { Vanilla } from './decorators/Vanilla'
+export type { TClassDecorator } from './types/TClassDecorator'
+export type { TComponentDecorator } from './types/TComponentDecorator'
+export type { TComponentOption } from './types/TComponentOption'
+export type { TCustomDecoratorCreator } from './types/TCustomDecoratorCreator'
+export type { TCustomDecoratorOption } from './types/TCustomDecoratorOption'
+export type { TInjectOption } from './types/TInjectOption'
+export type { TMemberDecorator } from './types/TMemberDecorator'
+export type { TMixedInstance } from './types/TMixedInstance'
+export type { TMixinsConstructor } from './types/TMixinsConstructor'
+export type { TOptionalArgDecorator } from './types/TOptionalArgDecorator'
+export type { TPropOption } from './types/TPropOption'
+export type { TRawComponentOptions } from './types/TRawComponentOptions'
+export type { TSetupFunction } from './types/TSetupFunction'
+export type { TSetupState } from './types/TSetupState'
+export type { TVModelOption } from './types/TVModelOption'
+export type { TVueConstructor } from './types/TVueConstructor'
+export type { TWatchOption } from './types/TWatchOption'

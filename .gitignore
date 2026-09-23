@@ -39,7 +39,6 @@ lerna-debug.log*
 .env
 
 #packages
-package-lock.json
-
-dev
 yarn.lock
+
+.omc
